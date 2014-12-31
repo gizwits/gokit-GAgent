@@ -74,9 +74,16 @@ mips32: folders \
 	lib \
 	product
 
+TEST_DIR = $(ROOTDIR)/test
+TEST_TAGET_FILES = $(TEST_DIR)/serial.c $(ROOTDIR)/product/linux/x86_drv.c $(ROOTDIR)/platform/gmcu/core_gagent.c $(ROOTDIR)/iof/iof_hook.c
+TEST_BINS = $(TEST_DIR)/serial
+test:x86
+	$(CC) $(CFLAGS) $(TEST_TAGET_FILES) $(INC) -o $(TEST_BINS) -l$(BIN)_$(OS)$(DEBUG) -L ./$(OBJ)
+	
 include $(ROOTDIR)/software/lib.mk
 include $(ROOTDIR)/product/linux/product.mk
 
 clean:
 	rm -rf obj
 	rm -rf target
+	rm -rf $(TEST_BINS)
