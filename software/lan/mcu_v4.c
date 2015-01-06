@@ -13,11 +13,12 @@ extern "C"{
 #include "wifi.h" 
 #include "Socket.h"    
 #include "iof_import.h"
+#include "local.h"
 
 void MCU_ResetPingTime()
 {
-    g_Xpg_GlobalVar.Xpg_Mcu.XPG_PingTime = DRV_GAgent_GetTime_MS();
-    g_Xpg_GlobalVar.Xpg_Mcu.loseTime=0;    
+    g_Xpg_GlobalVar.Xpg_Mcu.XPG_PingTime = 0;
+    g_Xpg_GlobalVar.Xpg_Mcu.loseTime = 0;
 }
 
 int GAgent_Ack2Mcu(int fd, char sn,char cmd)
@@ -542,54 +543,44 @@ int GAgentV4_Write2Mcu_with_p0(int fd, unsigned char cmd, unsigned char *data, u
     return ret;
 }
 
-
-
-int GAgent_UartTick()
-{
-    unsigned char pingbuf[9] = { 0xFF,0xFF,0x00,0x05,0x07,0x00,0x00,0x00,0x00 };
-    
-    if((DRV_GAgent_GetTime_MS()-g_Xpg_GlobalVar.Xpg_Mcu.XPG_PingTime)>(MCU_HEARTBEAT*ONE_SECOND))
-    {
-        GAgent_SetSN( pingbuf );
-        pingbuf[8] = GAgent_SetCheckSum( pingbuf,8);
-        MCU_SendData( pingbuf,9 );
-        
-        if(GAgent_CheckAck( 0,pingbuf,9, DRV_GAgent_GetTime_MS())==0)
-        {
-            MCU_ResetPingTime();
-            return 0;
-        }
-        else 
-        {
-            g_Xpg_GlobalVar.Xpg_Mcu.XPG_PingTime = DRV_GAgent_GetTime_MS();
-            return 1;
-        }
-    }
-    return 2;        
-}
-
-
-
 /**************************************************
 *
 *       wifi send Uart HeartBeat to MCU    
-*       Add by alex lin 2014-09-03    
 *       
 ***************************************************/
-int GAgent_Ping_McuTick( )
+static void Local_HB_Send(void)
 {
-    if( g_Xpg_GlobalVar.Xpg_Mcu.loseTime>=3 )
+    unsigned char pingbuf[9] = { 0xFF,0xFF,0x00,0x05,0x07,0x00,0x00,0x00,0x00 };
+
+    pingbuf[MCU_CMD_POS] = WIFI_PING2MCU;
+    GAgent_SetSN( pingbuf );
+    pingbuf[8] = GAgent_SetCheckSum( pingbuf,8);
+    MCU_SendData( pingbuf,9 );
+    return ;
+}
+
+void Local_HB_Timer(void)
+{
+    g_Xpg_GlobalVar.Xpg_Mcu.XPG_PingTime++;
+    if(g_Xpg_GlobalVar.Xpg_Mcu.XPG_PingTime >= LOCAL_HB_TIMEOUT_ONESHOT)
     {
+        Local_HB_Send();
+        g_Xpg_GlobalVar.Xpg_Mcu.loseTime++;
+        g_Xpg_GlobalVar.Xpg_Mcu.XPG_PingTime = 0;
+    }
+    if(g_Xpg_GlobalVar.Xpg_Mcu.loseTime >= LOCAL_HB_TIMEOUT_CNT_MAX &&
+        g_Xpg_GlobalVar.Xpg_Mcu.XPG_PingTime > LOCAL_HB_REDUNDANCE)
+    {
+        GAgent_Printf(GAGENT_INFO, "[Local] heart beat timeout over %d times:%d S, reboot",
+                    DRV_GAgent_GetTime_S, LOCAL_HB_TIMEOUT_CNT_MAX);
         DRV_GAgent_Reset();
+        MCU_ResetPingTime();
     }
-    else
-    {
-        if( GAgent_UartTick()==1 )
-        {
-            g_Xpg_GlobalVar.Xpg_Mcu.loseTime++;
-        }
-    }
-    return 0;
+}
+
+void Local_Timer(void)
+{
+    Local_HB_Timer();
 }
 
 /************************************************
@@ -617,6 +608,7 @@ int MCU_DispatchPacket( u8* buffer,int bufferlen )
         return 1;
     }
 
+    MCU_ResetPingTime();
     GAgent_Printf(GAGENT_DEBUG,"Get MCU PACKET, SN:%d, CMD=%02X, Len: %2x",SN, CMD, bufferlen);
     
     switch( CMD )

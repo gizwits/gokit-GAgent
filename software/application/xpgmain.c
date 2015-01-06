@@ -11,6 +11,7 @@
 #include "iof_import.h"
 #include "iof_export.h"
 #include "gagent_login_cloud.h"
+#include "local.h"
 
 #define GAGENT_VERSION "B4R012D0"
 
@@ -128,6 +129,8 @@ void GAgent_Init(void)
 	//启动Wifi 处理定时器
     GAgent_CreateTimer(GAGENT_TIMER_PERIOD,1000*(3), GAgent_MainTimer);
 
+    GAgent_CreateTimer(GAGENT_TIMER_PERIOD, ONE_SECOND, Local_Timer);
+
     return;
 }
 
@@ -147,8 +150,6 @@ void GAgent_DoBusiness(void)
     Socket_DoUDPServer();
     //GAgent_Printf(GAGENT_PACKETDUMP,"  %04d", __LINE__);
     UART_handlePacket();
-    //GAgent_Printf(GAGENT_PACKETDUMP,"  %04d", __LINE__);
-    GAgent_Ping_McuTick();
     //GAgent_Printf(GAGENT_PACKETDUMP,"  %04d", __LINE__);
 
     return;

@@ -15,7 +15,7 @@ extern "C"{
 /***********          LOCAL MACRO               ***********/
 #define XPG_PACKET_VERSIONLEN 4
 #define SOCKET_MAXTCPCLENT 8    
-#define LAN_CLIENT_MAXLIVETIME 80   /*60S, timeout*/
+#define LAN_CLIENT_MAXLIVETIME 12   /* 12S, timeout*/
 
 /***********          LOCAL VARIABLES           ***********/
 typedef struct SocketClent
