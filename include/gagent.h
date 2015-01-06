@@ -160,10 +160,11 @@ extern void GAgent_SaveSSIDAndKey(char *pssid, char *pkey);
 #define MCU_BYTES_NO_SUM        3
 
 
+#define CLOUT_MQTT_ALIVE        120
 /*Gizwits heartbeat with eath others, Cloud, SDK/Demo, GAgent and MCU*/
 #define MCU_HEARTBEAT           55
 #define LAN_HEARTBEAT           1
-#define MQTT_HEARTBEAT          50
+#define MQTT_HEARTBEAT          55
 #define HTTP_TIMEOUT            60
 
 /*For V4, GAgent waiting for MCU response of very CMD send by GAgent, Unit: ms*/

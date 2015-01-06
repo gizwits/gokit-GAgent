@@ -16,6 +16,7 @@ extern "C"{
 #include "http.h"    
 #include "iof_import.h"
 #include "gagent_login_cloud.h"
+#include "cloud.h"
 
 /****************************************************
 *****************************************************
@@ -30,7 +31,6 @@ extern "C"{
 *****************************************************
 *****************************************************/
 static uint16_t g_Msgsub_id=0;
-static int g_pingpacketack = 0;
 static char Clientid[24];
 
 /****************************************************
@@ -42,6 +42,8 @@ u8 g_MQTTBuffer[MQTT_SOCKET_BUFFER_LEN] = {0};
 int g_MQTTStatus=0;
 int DIdLen=0;
 mqtt_broker_handle_t g_stMQTTBroker;
+GAGENT_CLOUD_TYPE Gagent_Cloud_status = {0};
+
 
 /******************************************************************************
  ******************************************************************************
@@ -277,37 +279,57 @@ static int Mqtt_SendConnetPacket( mqtt_broker_handle_t *pstBroketHandle, char *p
     return 1;
 }
 
+void Cloud_HB_Status_init(void)
+{
+    Gagent_Cloud_status.pingTime = 0;
+    Gagent_Cloud_status.loseTime = 0;
+}
+
 /***********************************************************
 *
-*   功能 : MQTT 心跳处理函数, 若5次心跳没收到ack,
-*                  则重新登录云端服务器
+*   功能 : MQTT 心跳处理函数
 *
 *************************************************************/
-static void MQTT_HeartbeatTime()
+static void Cloud_Mqtt_HB_Timer(void)
 {
-    //pingpacketack=0 表示收到云端心跳包的返回
-    if(g_pingpacketack==0)
+    /* socketid<0,仍未建立和mqtt的连接 */
+    if(g_stMQTTBroker.socketid < 0)
     {
-        g_pingpacketack=1;
+        return ;
     }
-    else
+    
+    Gagent_Cloud_status.pingTime++;
+    /* 没收到mqtt任何数据，发送心跳包 */
+    if(Gagent_Cloud_status.pingTime >= CLOUD_HB_TIMEOUT_ONESHOT)
     {
-        g_pingpacketack++;
+        mqtt_ping(&g_stMQTTBroker);
+        Gagent_Cloud_status.loseTime++;
+        Gagent_Cloud_status.pingTime = 0;
     }
-    mqtt_ping(&g_stMQTTBroker); 
-    /*
-         发送了5次心跳包都没收到云端的ack,认为与云端断开连接。
-        让模块重新登录。
-        */
-    if( g_pingpacketack>=5 )
+    /* 长时间内没收到任何数据，重新登录mqtt服务器 */
+    if(Gagent_Cloud_status.loseTime >= CLOUD_HB_TIMEOUT_CNT_MAX && 
+            Gagent_Cloud_status.pingTime >= CLOUD_HB_TIMEOUT_REDUNDANCE)
     {
-        g_pingpacketack=1;
-        g_MQTTStatus= MQTT_STATUS_LOGIN;
+        g_ConCloud_Status = CONCLOUD_REQ_LOGIN;
         
         close( g_stMQTTBroker.socketid );
         g_stMQTTBroker.socketid = -1;
-        Mqtt_Login2Server( &g_stMQTTBroker);
+
+        Cloud_HB_Status_init();
+
+        GAgent_Printf(GAGENT_INFO, "[CLOUD]Heaert beat timeout over %d times:%d S,relogin mqtt",
+                CLOUD_HB_TIMEOUT_CNT_MAX, DRV_GAgent_GetTime_S());
     }
+}
+
+/***********************************************************
+*
+*   功能 : CLOUD 模块的计时器，有计时在这里添加
+*
+*************************************************************/
+void GAgent_Cloud_Timer(void)
+{
+    Cloud_Mqtt_HB_Timer();
 }
 
 static int Mqtt_DoLogin( mqtt_broker_handle_t *LOG_Sendbroker,u8* packet,int packetLen )
@@ -321,8 +343,9 @@ static int Mqtt_DoLogin( mqtt_broker_handle_t *LOG_Sendbroker,u8* packet,int pac
         GAgent_Printf(GAGENT_INFO,"MQTT_STATUS_START");
         return 0;
     }
-    Mqtt_SubLoginTopic( LOG_Sendbroker );	
-    GAgent_CreateTimer(GAGENT_TIMER_PERIOD, 1000*(MQTT_HEARTBEAT),MQTT_HeartbeatTime);
+    Mqtt_SubLoginTopic( LOG_Sendbroker );
+
+    Cloud_HB_Status_init();
     return 0;
 }
 
@@ -513,11 +536,11 @@ void MQTT_handlePacket()
             GAgent_Printf(GAGENT_INFO,"MQTT PacketType:%08x[g_MQTTStatus:%08x]", 
             packettype, g_MQTTStatus);
         }
-        
+
+        Cloud_HB_Status_init();
         switch(packettype)
         {
             case MQTT_MSG_PINGRESP:
-                g_pingpacketack=0;
                 break;
                 
             case MQTT_MSG_CONNACK:                          

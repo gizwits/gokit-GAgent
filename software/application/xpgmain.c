@@ -12,6 +12,7 @@
 #include "iof_export.h"
 #include "gagent_login_cloud.h"
 #include "local.h"
+#include "cloud.h"
 
 #define GAGENT_VERSION "B4R012D0"
 
@@ -41,6 +42,8 @@ void GAgent_Global_Status_Init(void)
 
     memset( &g_stMQTTBroker, 0, sizeof(g_stMQTTBroker.socketid) );
     g_stMQTTBroker.socketid = -1;
+
+    Cloud_HB_Status_init();
 }
 
 int GAgent_Config_Status_Init()
@@ -130,6 +133,8 @@ void GAgent_Init(void)
     GAgent_CreateTimer(GAGENT_TIMER_PERIOD,1000*(3), GAgent_MainTimer);
 
     GAgent_CreateTimer(GAGENT_TIMER_PERIOD, ONE_SECOND, Local_Timer);
+    
+    GAgent_CreateTimer(GAGENT_TIMER_PERIOD, ONE_SECOND, GAgent_Cloud_Timer);
 
     return;
 }

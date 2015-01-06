@@ -569,10 +569,10 @@ void Local_HB_Timer(void)
         g_Xpg_GlobalVar.Xpg_Mcu.XPG_PingTime = 0;
     }
     if(g_Xpg_GlobalVar.Xpg_Mcu.loseTime >= LOCAL_HB_TIMEOUT_CNT_MAX &&
-        g_Xpg_GlobalVar.Xpg_Mcu.XPG_PingTime > LOCAL_HB_REDUNDANCE)
+        g_Xpg_GlobalVar.Xpg_Mcu.XPG_PingTime >= LOCAL_HB_REDUNDANCE)
     {
         GAgent_Printf(GAGENT_INFO, "[Local] heart beat timeout over %d times:%d S, reboot",
-                    DRV_GAgent_GetTime_S, LOCAL_HB_TIMEOUT_CNT_MAX);
+                    LOCAL_HB_TIMEOUT_CNT_MAX, DRV_GAgent_GetTime_S());
         DRV_GAgent_Reset();
         MCU_ResetPingTime();
     }
