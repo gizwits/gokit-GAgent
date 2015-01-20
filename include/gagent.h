@@ -20,8 +20,9 @@ typedef struct GAGENT_CONFIG {
   char wifi_key[32]; /* AP key */
     char FirmwareId[8];  /* Firmware ID,identity application version */
     char Cloud_DId[GAGENT_DID_LEN_MAX]; /* Device, generate by server, unique for devices */
-  char FirmwareVerLen[2];
+  char FirmwareVerLen;
   char FirmwareVer[32];
+  unsigned int ota_fid;             /* ota file id */
 }GAgent_CONFIG_S;
 
 // Upgrade data struct

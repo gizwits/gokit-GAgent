@@ -13,6 +13,19 @@
 #define CLOUD_HB_TIMEOUT_CNT_MAX        (CLOUD_HB_TIMEOUT_MAX/CLOUD_HB_TIMEOUT_ONESHOT)
 #define CLOUD_HB_TIMEOUT_REDUNDANCE     (CLOUD_HB_TIMEOUT_MAX%55)
 
+#define MQTT_CMD_OTA                0x020e
+#define P0_OTA_HEAD_OFFSET          0
+    #define P0_OTA_HEAD_LEN             4
+#define P0_OTA_CMD_OFFSET           (P0_OTA_HEAD_OFFSET + P0_OTA_HEAD_LEN)
+    #define P0_OTA_CMD_LEN              2
+#define P0_OTA_TYPE_OFFSET          (P0_OTA_CMD_OFFSET + P0_OTA_CMD_LEN)
+    #define P0_OTA_TYPE_LEN             1
+#define P0_OTA_FID_OFFSET           (P0_OTA_TYPE_OFFSET + P0_OTA_TYPE_LEN)
+    #define P0_OTA_FID_LEN              4
+#define P0_OTA_URLLEN_OFFSET        (P0_OTA_FID_OFFSET+ P0_OTA_FID_LEN)
+    #define P0_OTA_URLLEN_LEN           2
+#define P0_OTA_URL_OFFSET           (P0_OTA_URLLEN_OFFSET + P0_OTA_URLLEN_LEN)
+
 int Mqtt_Register2Server( mqtt_broker_handle_t *Reg_broker);
 int Mqtt_Login2Server( mqtt_broker_handle_t *Reg_broker );
 int Mqtt_DispatchPublishPacket( mqtt_broker_handle_t *pstMQTTBroker, u8 *packetBuffer,int packetLen );

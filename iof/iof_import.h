@@ -39,6 +39,7 @@ extern int (*pf_Gagent_Rx_From_Mcu)(char *data, int len);
 extern int (*DRV_Led_Red)( int onoff );
 extern int (*DRV_Led_Green)( int onoff );
 
+extern int (*pf_OTA_Upgrade)(int offset, char *buf, int len);
 
 /*****************************************************************
  *****************************************************************

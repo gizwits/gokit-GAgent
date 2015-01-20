@@ -22,6 +22,7 @@ $(OBJ)/$(LIBTARGET): \
 	$(OBJ)/http.o \
 	$(OBJ)/adapter_linux.o \
 	$(OBJ)/gagent_login_cloud.o	\
+	$(OBJ)/md5.o	\
     #ar rc $@ $^ #create static lib
 	@$(AR) ru $(OBJ)/$(LIBTARGET) $^
 	@$(AR) ru $(OBJ)/../lib/$(LIBTARGET) $^
@@ -71,4 +72,7 @@ $(OBJ)/adapter_linux.o:$(SRC)/lib/adapter_linux.c
 	$(CC) $(CFLAGS) $(INC) -o $@ -c $<
 	
 $(OBJ)/gagent_login_cloud.o:$(SRC)/gagent_login_cloud.c
+	$(CC) $(CFLAGS) $(INC) -o $@ -c $<
+	
+$(OBJ)/md5.o:$(SRC)/lib/md5.c
 	$(CC) $(CFLAGS) $(INC) -o $@ -c $<

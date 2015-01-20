@@ -470,13 +470,57 @@ int Mqtt_DispatchPublishPacket( mqtt_broker_handle_t *pstMQTTBroker, u8 *packetB
     //订阅最新固件响应
     else if(strncmp(topic,"ser2cli_res/",strlen("ser2cli_res/"))==0)
     {
-        //pHiP0Data消息体的指针
-        //HiP0DataLen消息体的长度 packetBuffer
+        int ota_fid;
+        int type;
+        int cmd;
+        int urllen;
+        char *url = NULL;
+        int i = 0;
+
+        memcpy(&cmd, &pHiP0Data[P0_OTA_CMD_OFFSET], P0_OTA_CMD_LEN);
+        cmd = ntohs(cmd);
+        GAgent_Printf(GAGENT_INFO, "cmd:0x%x", cmd);
+
+        switch(cmd)
+        {
+            case MQTT_CMD_OTA:
+                memcpy(&ota_fid, &pHiP0Data[P0_OTA_FID_OFFSET], P0_OTA_FID_LEN);
+                ota_fid = ntohl(ota_fid);
+                Gagent_Cloud_status.ota_fid = ota_fid;
+                GAgent_Printf(GAGENT_INFO, "[CLOUD]push ota_fid:%d,cur ota_fid:%d", 
+                                Gagent_Cloud_status.ota_fid, g_stGAgentConfigData.ota_fid);
+                
+                if(ota_fid != g_stGAgentConfigData.ota_fid && ota_fid != 0)
+                {
+                    memcpy(&urllen, &pHiP0Data[P0_OTA_URLLEN_OFFSET], P0_OTA_URLLEN_LEN);
+                    urllen = ntohs(urllen);
+
+                    url = GAgent_strstr(&pHiP0Data[P0_OTA_URL_OFFSET], "/dev/ota/download");
+                    urllen = urllen - (url - (char *)&pHiP0Data[P0_OTA_URL_OFFSET]);
+                    if(NULL != Gagent_Cloud_status.otaUrlHttpCont)
+                    {
+                        free(Gagent_Cloud_status.otaUrlHttpCont);
+                        Gagent_Cloud_status.otaUrlHttpCont = NULL;
+                    }
+                    Gagent_Cloud_status.otaUrlHttpCont = malloc(urllen);
+                    if(NULL == Gagent_Cloud_status.otaUrlHttpCont)
+                    {
+                        GAgent_Printf(GAGENT_INFO, "[CLOUD]%s malloc fail!len:%d", __func__, urllen);
+                        break;
+                    }
+
+                    memcpy(Gagent_Cloud_status.otaUrlHttpCont, url, urllen);
+                    g_ConCloud_Status = CONCLOUD_REQ_OTA_FILE;
+                }
+                break;
+            default:
+                break;
+        }
         
         #if (GAGENT_FEATURE_OTA == 1)
-        {      
-            GAgent_Printf(GAGENT_INFO," MQTT Respond Topic1: %s\r\n",topic);            
-            memcpy( Cloud_FirmwareId,pHiP0Data+6,8);            
+        {
+            GAgent_Printf(GAGENT_INFO," MQTT Respond Topic1: %s\r\n",topic);
+            memcpy( Cloud_FirmwareId,pHiP0Data+6,8);
             for( i=0;i<8;i++)
             {
                 if( Cloud_FirmwareId[i]!=0 ) break;

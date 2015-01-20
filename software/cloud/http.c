@@ -5,6 +5,7 @@
 #include "string.h"
 #include "mqtt.h"
 #include "iof_import.h"
+#include "cloud.h"
 
 /********************************************************
  ********************************************************
@@ -166,6 +167,7 @@ int Http_ReadSocket( int socket,char *Http_recevieBuf,int bufLen )
     }
     return bytes_rcvd;
 }
+
 /******************************************************
 *
 *   Http_recevieBuf :   http receive data
@@ -252,5 +254,145 @@ int Http_Sent_Provision()
     }
     
     return 0;
+}
+
+int GAgent_Http_Get(const char *host, const char *content, const char *content_type)
+{
+    char *getBuf=NULL;
+    int ret=0;
+    int len = 0;
+    
+    getBuf = (char*)malloc( CLOUD_HTTP_CONTENT_MAX );
+    if( getBuf==NULL )
+    {
+        return 1;
+    }
+    
+    memset( getBuf, 0, CLOUD_HTTP_CONTENT_MAX );
+    
+    len += snprintf(getBuf + len, CLOUD_HTTP_CONTENT_MAX - len, "GET %s HTTP/1.1\r\n", content);
+    len += snprintf(getBuf + len, CLOUD_HTTP_CONTENT_MAX - len, "Host: %s\r\n", host);
+    len += snprintf(getBuf + len, CLOUD_HTTP_CONTENT_MAX - len, "%s\r\n\r\n", content_type);
+
+    ret = send( g_Xpg_GlobalVar.http_socketid, getBuf, len, 0 );
+    free(getBuf);
+
+    if(ret<=0 )
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+/*********************************************************************
+ *
+ *   FUNCTION 				:		TO get the http headlen
+ *		httpbuf					:		http receive buf 
+ *		return 					:		the http headlen.
+ *   Add by Alex lin  --2014-12-02
+ *
+ **********************************************************************/
+int Http_HeadLen( char *httpbuf )
+{
+    char *p_start = NULL;
+    char *p_end =NULL;
+    char temp;
+    int headlen=0;
+    p_start = httpbuf;
+    p_end = GAgent_strstr( httpbuf,kCRLFLineEnding);
+    if( p_end==NULL )
+    {
+        GAgent_Printf(GAGENT_INFO,"Can't not find the http head!");
+        return 0;
+    }
+    p_end=p_end+strlen(kCRLFLineEnding);
+    headlen = (p_end-p_start);
+    return headlen;
+}
+/*********************************************************************
+ *
+ *   FUNCTION 				:		TO get the http bodylen
+ *		httpbuf					:		http receive buf 
+ *		return 					:		the http bodylen.(0-error)
+ *   Add by Alex lin  --2014-12-02
+ *
+ **********************************************************************/
+int Http_BodyLen( char *httpbuf )
+{
+    char *p_start = NULL;
+    char *p_end =NULL;
+    char temp;
+    char bodyLenbuf[10]={0};
+    int bodylen=0;	//Content-Length: 
+    p_start = GAgent_strstr( httpbuf,"Content-Length: ");
+    if( p_start==NULL )	return 0;
+    p_start = p_start+strlen("Content-Length: ");
+    p_end = GAgent_strstr( p_start,kCRLFNewLine);
+    if( p_end==NULL )		return 0;
+
+    memcpy( bodyLenbuf,p_start,(p_end-p_start));
+    bodylen = atoi(bodyLenbuf);
+    return bodylen;
+}
+int Http_GetFV(char *httpbuf,char *FV )
+{
+    char *p_start = NULL;
+    char *p_end =NULL;
+    int FV_Len=0;
+    p_start = GAgent_strstr( httpbuf,"Firmware-Version: ");
+    if(p_start==NULL) 
+        return 0;
+    p_start = p_start+strlen("Firmware-Version: ");
+    p_end = GAgent_strstr( p_start,kCRLFNewLine);
+    if(p_end==NULL)
+        return 0;
+    FV_Len = (p_end-p_start);
+    if(FV_Len > FIRMWARE_LEN)
+        FV_Len = FIRMWARE_LEN;
+    memcpy(FV,p_start,FV_Len);
+    return FV_Len;
+
+}
+/*************************************************************
+ *
+ *   FUNCTION  :  get MD5 from http head.
+ *   httpbuf   :  http buf.
+ *   MD5       :  MD5 form http head(16b).
+ *           add by alex.lin ---2014-12-04
+ *************************************************************/
+int Http_GetMD5( char *httpbuf,char *MD5)
+{
+    char *p_start = NULL;
+    char *p_end =NULL;
+    char Temp_MD5[32]={0};
+    char MD5_TMP[16];
+    char Temp[3]={0};
+    char *str;
+    int i=0,j=0;
+    p_start = GAgent_strstr( httpbuf,"Firmware-MD5: ");
+    if(p_start==NULL)
+        return 1;
+    p_start = p_start+strlen("Firmware-MD5: ");
+    p_end = GAgent_strstr( p_start,kCRLFNewLine);
+    if(p_end==NULL)
+        return 1;
+    if((p_end-p_start)!=32) return 1;
+    memcpy( Temp_MD5,p_start,32);
+    
+    MD5[16]= '\0';
+
+    for(i=0;i<32;i=i+2)
+    {
+        Temp[0] = Temp_MD5[i];
+        Temp[1] = Temp_MD5[i+1];
+        Temp[2] = '\0';
+        MD5_TMP[j]= strtol(Temp, &str,16);  
+        j++;
+    }
+    memcpy(MD5,MD5_TMP,16);
+    return 16;
 }
 

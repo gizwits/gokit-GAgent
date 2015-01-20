@@ -316,4 +316,24 @@ void X86_Reset(void)
     return ;
 }
 
+int X86_Ota_Upgrade(int offset, char *buf, int len)
+{
+    int fd;
+
+    fd = open("/root/ota.bin", O_RDWR | O_CREAT);
+    if(-1 == fd)
+    {
+        printf("open file fail\r\n");
+        return -1;
+    }
+
+    lseek(fd , offset , SEEK_SET);
+
+    write(fd, buf, len);
+    
+    close(fd);
+
+    return 0;
+}
+
 

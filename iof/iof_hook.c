@@ -23,5 +23,7 @@ void IOF_General_Hook_Init(void)
 	DRV_GAgent_WiFiStartScan = X86_WiFiStartScan;
 
     DRV_GAgent_Reset = X86_Reset;
+
+    pf_OTA_Upgrade = X86_Ota_Upgrade;
 }
 

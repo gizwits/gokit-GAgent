@@ -210,7 +210,7 @@ int GetWifiInfo( int nSocket )
     unsigned char *wifiInfoBuf=NULL;
     int pos,i=0;
     int TempFirmwareVerLen=0;    
-    TempFirmwareVerLen = g_stGAgentConfigData.FirmwareVerLen[1];      
+    TempFirmwareVerLen = g_stGAgentConfigData.FirmwareVerLen;      
     if( (TempFirmwareVerLen>32)||(TempFirmwareVerLen<=0) )
     {
         //当固件版本信息长度超出规定范围 hard core一个版本信息。

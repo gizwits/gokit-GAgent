@@ -20,5 +20,6 @@ extern void x86_timer_handle(int signo);
 extern void X86_Timer_Creat(int period_s, unsigned long period_us,
         x86_timer_callback p_callback);
 extern void X86_Reset(void);
+extern int X86_Ota_Upgrade(int offset, char *buf, int len);
 
 #endif  /* __X86_DRV_H__ */
